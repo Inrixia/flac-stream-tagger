@@ -1,4 +1,4 @@
-import { BufferBase } from "../buffer-base.js";
+import { BufferBase } from "../lib/buffer-base.js";
 import type { MetadataBlockHeader } from "./header.js";
 
 export abstract class MetadataBlock extends BufferBase {

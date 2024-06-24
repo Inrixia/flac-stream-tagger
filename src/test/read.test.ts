@@ -1,14 +1,10 @@
+import { createReadStream } from "fs";
+import { readFile } from "fs/promises";
 import { describe, test } from "vitest";
-import { readFlacTags, readFlacTagsSync } from "../index.js";
-import { assertTags, readPath } from "./common.js";
+import { readFlacTagsBuffer, readFlacTagsStream } from "../index.js";
+import { assertTags, readPath, sourcePath } from "./common.js";
 
 describe("read FLAC tags", () => {
-	test("read async", async () => {
-		const actualTags = await readFlacTags(readPath);
-		assertTags(actualTags);
-	});
-	test("read sync", () => {
-		const actualTags = readFlacTagsSync(readPath);
-		assertTags(actualTags);
-	});
+	test("read buffer", () => readFile(readPath).then(readFlacTagsBuffer).then(assertTags));
+	// test("read stream", () => readFlacTagsStream(createReadStream(sourcePath)).then(assertTags));
 });

@@ -1,7 +1,7 @@
 import imageinfo from "imageinfo";
 import { MetadataBlockHeader, MetadataBlockHeaderLength, MetadataBlockType } from "./header.js";
 import { MetadataBlock } from "./index.js";
-import { allocBufferAndWrite } from "../buffer-base.js";
+import { allocBufferAndWrite } from "../lib/buffer-base.js";
 
 export enum PictureType {
 	Other,
@@ -47,7 +47,7 @@ export class PictureBlock extends MetadataBlock {
 		height?: number;
 		colorDepth?: number;
 		colors?: number;
-		pictureBuffer: Buffer;
+		buffer: Buffer;
 	}) {
 		super();
 		const {
@@ -61,7 +61,7 @@ export class PictureBlock extends MetadataBlock {
 			height,
 			colorDepth = 24,
 			colors = 0,
-			pictureBuffer,
+			buffer,
 		} = initialValues;
 		this.header = header;
 		this.pictureType = pictureType;
@@ -70,7 +70,7 @@ export class PictureBlock extends MetadataBlock {
 			this.width = width;
 			this.height = height;
 		} else {
-			const info = imageinfo(pictureBuffer);
+			const info = imageinfo(buffer);
 			this.mime = mime ?? info.mimeType;
 			this.width = width ?? info.width;
 			this.height = height ?? info.height;
@@ -78,7 +78,7 @@ export class PictureBlock extends MetadataBlock {
 		this.description = description;
 		this.colorDepth = colorDepth;
 		this.colors = colors;
-		this.pictureBuffer = pictureBuffer;
+		this.pictureBuffer = buffer;
 	}
 
 	static fromBuffer(buffer: Buffer) {
@@ -128,7 +128,7 @@ export class PictureBlock extends MetadataBlock {
 			height,
 			colorDepth,
 			colors,
-			pictureBuffer,
+			buffer: pictureBuffer,
 		});
 	}
 

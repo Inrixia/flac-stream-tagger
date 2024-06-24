@@ -1,4 +1,4 @@
-import { BufferBase, allocBufferAndWrite } from "../buffer-base.js";
+import { BufferBase, allocBufferAndWrite } from "../lib/buffer-base.js";
 
 export enum MetadataBlockType {
 	StreamInfo = 0,
@@ -24,8 +24,9 @@ export class MetadataBlockHeader extends BufferBase {
 		this.dataLength = dataLength;
 	}
 
-	static fromBuffer(buffer: Buffer) {
-		const lastAndType = buffer.readUint8();
+	public static readonly SIZE = 4;
+	static fromBuffer(buffer: Buffer, offset?: number) {
+		const lastAndType = buffer.readUint8(offset);
 		return new MetadataBlockHeader({
 			isLast: (lastAndType & 0b10000000) === 1,
 			type: (lastAndType & 0b01111111) as MetadataBlockType,

@@ -1,6 +1,6 @@
 import { assert } from "vitest";
 import { readFile } from "fs/promises";
-import { FlacTags } from "../index.js";
+import { FlacTags } from "../lib/FlacTags.js";
 import { join } from "path";
 
 export const coverBuffer = await readFile(join(__dirname, "./cover.jpg"));
@@ -19,10 +19,11 @@ export const tags: FlacTags = {
 		buffer: coverBuffer,
 	},
 };
+const tagMap = tags.tagMap!;
 export const assertTags = (actualTags: FlacTags) => {
-	assert.equal(actualTags.tagMap.title, tags.tagMap.title);
-	assert.deepEqual(actualTags.tagMap.artist, tags.tagMap.artist);
-	assert.equal(actualTags.tagMap.album, tags.tagMap.album);
-	assert.equal(actualTags.tagMap.albumSortOrder, tags.tagMap.albumSortOrder);
+	assert.equal(actualTags.tagMap!.title, tagMap.title);
+	assert.deepEqual(actualTags.tagMap!.artist, tagMap.artist);
+	assert.equal(actualTags.tagMap!.album, tagMap.album);
+	assert.equal(actualTags.tagMap!.albumSortOrder, tagMap.albumSortOrder);
 	assert.isTrue(coverBuffer.equals(actualTags.picture?.buffer!));
 };

@@ -1,23 +1,21 @@
-import { describe, test, beforeEach, afterEach } from "vitest";
-import { copyFile, unlink } from "fs/promises";
-import { writeFlacTags, readFlacTags, writeFlacTagsSync, readFlacTagsSync } from "../index.js";
+import { describe, test, afterEach } from "vitest";
+import { createReadStream } from "fs";
+import { readFile, unlink, writeFile } from "fs/promises";
+import { writeFlacTagsBuffer, readFlacTagsBuffer } from "../index.js";
 import { assertTags, sourcePath, tags, writePath } from "./common.js";
+import { FlacStreamTagger } from "../FlacStream.js";
 
-beforeEach(async () => {
-	await copyFile(sourcePath, writePath);
-});
-afterEach(async () => {
-	await unlink(writePath);
-});
+afterEach(() => unlink(writePath));
 describe("write FLAC tags", () => {
-	test("write async", async () => {
-		await writeFlacTags(tags, writePath);
-		const actualTags = await readFlacTags(writePath);
-		assertTags(actualTags);
+	test("write buffer", async () => {
+		const sourceBuffer = await readFile(sourcePath);
+		const sourceWithTagsBuffer = await writeFlacTagsBuffer(tags, sourceBuffer);
+		await writeFile(writePath, sourceWithTagsBuffer);
+		return readFile(writePath).then(readFlacTagsBuffer).then(assertTags);
 	});
-	test("write sync", () => {
-		writeFlacTagsSync(tags, writePath);
-		const actualTags = readFlacTagsSync(writePath);
-		assertTags(actualTags);
+	test("write stream", async () => {
+		const sourceStream = createReadStream(sourcePath);
+		await writeFile(writePath, sourceStream.pipe(new FlacStreamTagger(tags)));
+		return readFile(writePath).then(readFlacTagsBuffer).then(assertTags);
 	});
 });
