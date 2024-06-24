@@ -1,4 +1,4 @@
-import { Transform, TransformCallback } from "stream";
+import { Readable, Transform, TransformCallback } from "stream";
 import { FlacStreamMarker } from "./FlacStream.js";
 import { FlacTags } from "./lib/FlacTags.js";
 import { MetadataBlockHeader, MetadataBlockType } from "./metadata-block/header.js";
@@ -9,19 +9,50 @@ import { VorbisCommentBlock } from "./metadata-block/vorbis-comment.js";
 
 export class FlacStreamTagger extends Transform {
 	private index: number = 0;
-	private processedHeader: boolean = false;
+	private done: boolean = false;
 	private headerBuffer: Buffer = Buffer.alloc(0);
 
-	private readonly metaBlocks: MetadataBlock[] = [];
+	private readonly _metaBlocks: MetadataBlock[] = [];
+	private readonly _metaBlocksReady: Promise<void>;
+	private _metaBlocksInner?: { res: () => void; rej: (err: Error) => void };
 	private picBlock?: PictureBlock;
 	private vorbisBlock?: VorbisCommentBlock;
 
 	private readOnly: boolean = true;
 
+	public static fromBuffer(buffer: Buffer, flacTags?: FlacTags): FlacStreamTagger {
+		const tagger = new FlacStreamTagger(flacTags);
+		const readable = new Readable();
+		readable.push(buffer);
+		// Indicate the end of the stream
+		readable.push(null);
+		readable.pipe(tagger);
+		return tagger;
+	}
+
+	public static fromStream(stream: Readable, flacTags?: FlacTags): FlacStreamTagger {
+		const tagger = new this(flacTags);
+		stream.pipe(tagger);
+		return tagger;
+	}
+
+	public toBuffer(): Promise<Buffer> {
+		if (this.readOnly) throw new Error("Stream is read-only");
+		return new Promise((resolve, reject) => {
+			const chunks: Buffer[] = [];
+			this.on("data", (chunk) => chunks.push(chunk));
+			this.on("end", () => resolve(Buffer.concat(chunks)));
+			this.on("error", reject);
+		});
+	}
+
 	constructor(flacTags: FlacTags = {}) {
 		super();
 		// If no tags for writing are given, then make stream read-only
 		this.readOnly = flacTags === undefined;
+
+		this._metaBlocksReady = new Promise((res, rej) => (this._metaBlocksInner = { res, rej }));
+
 		const { tagMap, picture } = flacTags;
 		if (tagMap !== undefined) {
 			this.vorbisBlock = new VorbisCommentBlock();
@@ -33,23 +64,36 @@ export class FlacStreamTagger extends Transform {
 					this.vorbisBlock.commentList.push(`${key.toUpperCase()}=${value}`);
 				}
 			}
-			this.metaBlocks.push(this.vorbisBlock);
+			this._metaBlocks.push(this.vorbisBlock);
 		}
 		if (picture !== undefined) {
 			this.picBlock = new PictureBlock(picture);
 			this.picBlock.header.isLast = true;
 			this.picBlock.header.dataLength = this.picBlock.length - this.picBlock.header.length;
-			this.metaBlocks.push(this.picBlock);
+			this._metaBlocks.push(this.picBlock);
 		}
 	}
+
+	public async tags(): Promise<FlacTags> {
+		await this._metaBlocksReady;
+		return {
+			tagMap: this.vorbisBlock?.toTagMap() ?? undefined,
+			picture: this.picBlock?.toPicture() ?? undefined,
+		};
+	}
+	public async metaBlocks(): Promise<MetadataBlock[]> {
+		await this._metaBlocksReady;
+		return this._metaBlocks;
+	}
+
 	private onDone(callback: TransformCallback) {
-		this.processedHeader = true;
+		this.done = true;
 		callback(
 			null,
 			Buffer.concat([
 				Buffer.from(FlacStreamMarker),
-				...this.metaBlocks.map((block, index) => {
-					const isLast = index === this.metaBlocks.length - 1;
+				...this._metaBlocks.map((block, index) => {
+					const isLast = index === this._metaBlocks.length - 1;
 					block.header.isLast = isLast;
 					block.header.dataLength = block.length - block.header.length;
 					return block.toBuffer();
@@ -57,14 +101,16 @@ export class FlacStreamTagger extends Transform {
 				this.headerBuffer.subarray(this.index),
 			])
 		);
+		this._metaBlocksInner?.res?.();
 	}
 	_flush(_callback: TransformCallback): void {
 		const callback = this.safeCallback(_callback);
-		if (!this.processedHeader && !this.readOnly) return this.onDone(callback);
+		if (!this.done && !this.readOnly) return this.onDone(callback);
 		return callback();
 	}
 	safeCallback(callback: TransformCallback): TransformCallback {
 		return (error, data) => {
+			if (error) this._metaBlocksInner?.rej?.(error);
 			// void data if this.readOnly is true
 			if (this.readOnly) return callback(error);
 			return callback(error, data);
@@ -73,7 +119,7 @@ export class FlacStreamTagger extends Transform {
 	_transform(chunk: Buffer, encoding: BufferEncoding, _callback: TransformCallback): void {
 		const callback = this.safeCallback(_callback);
 		try {
-			if (this.processedHeader) return callback(null, chunk);
+			if (this.done) return callback(null, chunk);
 
 			this.headerBuffer = Buffer.concat([this.headerBuffer, chunk]);
 
@@ -95,13 +141,19 @@ export class FlacStreamTagger extends Transform {
 				this.index += block.length;
 				switch (block.type) {
 					case MetadataBlockType.VorbisComment:
-						if (this.vorbisBlock === undefined) this.metaBlocks.push(block);
+						if (this.vorbisBlock === undefined) {
+							this._metaBlocks.push(block);
+							this.vorbisBlock = <VorbisCommentBlock>block;
+						}
 						break;
 					case MetadataBlockType.Picture:
-						if (this.picBlock?.pictureType !== (<PictureBlock>block).pictureType) this.metaBlocks.push(block);
+						if (this.picBlock?.pictureType !== (<PictureBlock>block).pictureType) {
+							this._metaBlocks.push(block);
+							this.picBlock = <PictureBlock>block;
+						}
 						break;
 					default:
-						this.metaBlocks.push(block);
+						this._metaBlocks.push(block);
 						break;
 				}
 				if (block.header.isLast) return this.onDone(callback);

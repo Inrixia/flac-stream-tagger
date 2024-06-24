@@ -149,6 +149,17 @@ export class PictureBlock extends MetadataBlock {
 		]);
 	}
 
+	toPicture() {
+		return {
+			pictureType: this.pictureType,
+			mime: this.mime,
+			description: this.description,
+			colorDepth: this.colorDepth,
+			colors: this.colors,
+			buffer: this.pictureBuffer,
+		};
+	}
+
 	get length() {
 		return (
 			MetadataBlockHeaderLength +

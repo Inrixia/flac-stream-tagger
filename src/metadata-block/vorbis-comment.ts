@@ -1,6 +1,7 @@
 import { MetadataBlockHeader, MetadataBlockHeaderLength, MetadataBlockType } from "./header.js";
 import { MetadataBlock } from "./index.js";
 import { allocBufferAndWrite } from "../lib/buffer-base.js";
+import { FlacTagMap } from "../lib/createFlacTagMap.js";
 
 export const DefaultVendorString = "reference flac-tagger 1.0.0 20230626";
 export class VorbisCommentBlock extends MetadataBlock {
@@ -79,6 +80,36 @@ export class VorbisCommentBlock extends MetadataBlock {
 			allocBufferAndWrite(4, (b) => b.writeUint32LE(this.commentList.length)),
 			commentBuffer,
 		]);
+	}
+
+	toTagMap() {
+		const tagMap: FlacTagMap = new Proxy(
+			{},
+			{
+				get(target, p, receiver) {
+					return Reflect.get(target, p.toString().toUpperCase(), receiver);
+				},
+				set(target, p, newValue, receiver) {
+					return Reflect.set(target, p.toString().toUpperCase(), newValue, receiver);
+				},
+			}
+		);
+		for (const it of this.commentList) {
+			const splitIndex = it.indexOf("=");
+			if (splitIndex === -1) continue;
+
+			const key = it.substring(0, splitIndex);
+			const value = it.substring(splitIndex + 1);
+			const existingValue = tagMap[key];
+
+			if (existingValue) {
+				if (Array.isArray(existingValue)) existingValue.push(value);
+				else tagMap[key] = [existingValue, value];
+			} else {
+				tagMap[key] = value;
+			}
+		}
+		return tagMap;
 	}
 
 	get commentListLength() {
