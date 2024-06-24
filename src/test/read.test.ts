@@ -1,7 +1,7 @@
 import { createReadStream } from "fs";
 import { readFile } from "fs/promises";
 import { describe, test } from "vitest";
-import { readFlacTagsBuffer, readFlacTagsStream } from "../index.js";
+import { readFlacTagsBuffer } from "../index.js";
 import { assertTags, readPath, sourcePath } from "./common.js";
 
 describe("read FLAC tags", () => {

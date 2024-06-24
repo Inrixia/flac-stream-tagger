@@ -2,7 +2,8 @@ import { FlacTags } from "./lib/FlacTags.js";
 import { MetadataBlockType } from "./metadata-block/header.js";
 import { PictureBlock } from "./metadata-block/picture.js";
 import { VorbisCommentBlock } from "./metadata-block/vorbis-comment.js";
-import { FlacStream, FlacStreamTagger } from "./FlacStream.js";
+import { FlacStream } from "./FlacStream.js";
+import { FlacStreamTagger } from "./FlacStreamTagger.js";
 import { WriteStream } from "fs";
 import { Readable } from "stream";
 

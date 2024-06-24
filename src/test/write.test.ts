@@ -3,7 +3,7 @@ import { createReadStream } from "fs";
 import { readFile, unlink, writeFile } from "fs/promises";
 import { writeFlacTagsBuffer, readFlacTagsBuffer } from "../index.js";
 import { assertTags, sourcePath, tags, writePath } from "./common.js";
-import { FlacStreamTagger } from "../FlacStream.js";
+import { FlacStreamTagger } from "../FlacStreamTagger.js";
 
 afterEach(() => unlink(writePath));
 describe("write FLAC tags", () => {

@@ -19,7 +19,6 @@ export { createFlacTagMap } from "./lib/createFlacTagMap.js";
  * @param input FLAC buffer
  */
 export const readFlacTagsBuffer = (buffer: Buffer) => readFlacTags(FlacStream.fromBuffer(buffer));
-export const readFlacTagsStream = (stream: Readable) => FlacStream.fromStream(stream).then(readFlacTags);
 /**
  * Write FLAC Tags
  * @param input FLAC buffer
