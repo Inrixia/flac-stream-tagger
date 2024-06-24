@@ -1,5 +1,4 @@
-import { FlacTagMap } from "./createFlacTagMap.js";
-import { PictureType } from "../metadata-block/picture.js";
+import { PictureType } from "../metadata-block/PictureBlock.js";
 
 export type FlacPicture = {
 	/** Specify the {@link PictureType}
@@ -23,6 +22,8 @@ export type FlacPicture = {
 	/** Buffer data of the image */
 	buffer: Buffer;
 };
+
+export type FlacTagMap = Record<string, string[] | string>;
 
 /**
  * The FLAC tags interface for read / write.

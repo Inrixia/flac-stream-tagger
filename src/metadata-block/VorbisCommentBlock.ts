@@ -1,29 +1,22 @@
-import { MetadataBlockHeader, MetadataBlockHeaderLength, MetadataBlockType } from "./header.js";
-import { MetadataBlock } from "./index.js";
-import { allocBufferAndWrite } from "../lib/buffer-base.js";
-import { FlacTagMap } from "../lib/createFlacTagMap.js";
+import { MetadataBlockHeader, MetadataBlockHeaderLength, MetadataBlockType } from "./MetadataBlockHeader.js";
+import { MetadataBlock } from "./MetadataBlock.js";
+import { allocBufferAndWrite } from "../lib/BufferBase.js";
+import { FlacTagMap } from "../lib/FlacTags.js";
 
-export const DefaultVendorString = "reference flac-tagger 1.0.0 20230626";
-export class VorbisCommentBlock extends MetadataBlock {
-	header: MetadataBlockHeader;
-	vendorString: string;
-	commentList: string[];
+export class VorbisCommentBlock extends MetadataBlock<MetadataBlockType.VorbisComment> {
+	public header: MetadataBlockHeader<MetadataBlockType.VorbisComment>;
+	public vendorString: string;
+	public commentList: string[];
 
 	constructor(
 		initialValues: {
-			header?: MetadataBlockHeader;
+			header?: MetadataBlockHeader<MetadataBlockType.VorbisComment>;
 			vendorString?: string;
 			commentList?: string[];
 		} = {}
 	) {
 		super();
-		const {
-			header = new MetadataBlockHeader({
-				type: MetadataBlockType.VorbisComment,
-			}),
-			vendorString = DefaultVendorString,
-			commentList = [],
-		} = initialValues;
+		const { header = new MetadataBlockHeader(MetadataBlockType.VorbisComment), vendorString = "", commentList = [] } = initialValues;
 		this.header = header;
 		this.vendorString = vendorString;
 		this.commentList = commentList;
@@ -32,7 +25,8 @@ export class VorbisCommentBlock extends MetadataBlock {
 	static fromBuffer(buffer: Buffer) {
 		let bufferIndex = 0;
 
-		const header = MetadataBlockHeader.fromBuffer(buffer);
+		const header = MetadataBlockHeader.fromBuffer<MetadataBlockType.VorbisComment>(buffer);
+		if (header.type !== MetadataBlockType.VorbisComment) throw new Error(`Invalid vorbis comment block header type! Expected type ${MetadataBlockType.VorbisComment} got ${header.type}`);
 		bufferIndex += header.length;
 
 		const vendorLength = buffer.readUintLE(bufferIndex, 4);
@@ -64,13 +58,13 @@ export class VorbisCommentBlock extends MetadataBlock {
 	toBuffer() {
 		const commentBuffer = Buffer.alloc(this.commentListLength);
 		let commentBufferIndex = 0;
-		this.commentList.forEach((comment) => {
+		for (const comment of this.commentList) {
 			const length = Buffer.byteLength(comment);
 			commentBuffer.writeUintLE(length, commentBufferIndex, 4);
 			commentBufferIndex += 4;
 			commentBuffer.write(comment, commentBufferIndex);
 			commentBufferIndex += length;
-		});
+		}
 		const vendorStringBuffer = Buffer.from(this.vendorString);
 
 		return Buffer.concat([
@@ -83,7 +77,7 @@ export class VorbisCommentBlock extends MetadataBlock {
 	}
 
 	toTagMap() {
-		const tagMap: FlacTagMap = new Proxy(
+		const tagMap = new Proxy<FlacTagMap>(
 			{},
 			{
 				get(target, p, receiver) {
@@ -113,7 +107,7 @@ export class VorbisCommentBlock extends MetadataBlock {
 	}
 
 	get commentListLength() {
-		return this.commentList.map((it) => Buffer.byteLength(it) + 4).reduce((previous, current) => previous + current, 0);
+		return this.commentList.map((comment) => Buffer.byteLength(comment) + 4).reduce((previous, current) => previous + current, 0);
 	}
 
 	get length() {

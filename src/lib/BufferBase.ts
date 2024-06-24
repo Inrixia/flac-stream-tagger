@@ -1,3 +1,5 @@
+import { MetadataBlockType } from "../metadata-block/MetadataBlockHeader.js";
+
 export abstract class BufferBase {
 	abstract toBuffer(): Buffer;
 	abstract get length(): number;

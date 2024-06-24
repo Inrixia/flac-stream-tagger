@@ -1,10 +1,10 @@
 import { Readable, Transform, TransformCallback } from "stream";
 import { FlacTags } from "./lib/FlacTags.js";
-import { MetadataBlockHeader, MetadataBlockType } from "./metadata-block/header.js";
-import { MetadataBlock } from "./metadata-block/index.js";
-import { parseBlock } from "./metadata-block/parse.js";
-import { PictureBlock } from "./metadata-block/picture.js";
-import { VorbisCommentBlock } from "./metadata-block/vorbis-comment.js";
+import { MetadataBlockHeader, MetadataBlockType } from "./metadata-block/MetadataBlockHeader.js";
+import { MetadataBlock } from "./metadata-block/MetadataBlock.js";
+import { PictureBlock } from "./metadata-block/PictureBlock.js";
+import { VorbisCommentBlock } from "./metadata-block/VorbisCommentBlock.js";
+import { OtherMetadataBlock } from "./metadata-block/OtherMetadataBlock.js";
 
 export class FlacStreamTagger extends Transform {
 	private index: number = 0;
@@ -134,30 +134,34 @@ export class FlacStreamTagger extends Transform {
 
 			// Process metadata blocks
 			while (this.index + MetadataBlockHeader.SIZE < this.headerBuffer.length) {
-				const { dataLength } = MetadataBlockHeader.fromBuffer(this.headerBuffer.subarray(this.index, this.index + MetadataBlockHeader.SIZE));
+				const { dataLength, type, length } = MetadataBlockHeader.fromBuffer(this.headerBuffer.subarray(this.index, this.index + MetadataBlockHeader.SIZE));
 				if (this.index + dataLength + MetadataBlockHeader.SIZE > this.headerBuffer.length) break;
 
+				const blockLength = dataLength + length;
 				const blockBuffer = this.headerBuffer.subarray(this.index);
-				const block = parseBlock(blockBuffer);
-				this.index += block.length;
-				switch (block.type) {
+				this.index += blockLength;
+				let block;
+				switch (type) {
 					case MetadataBlockType.VorbisComment:
 						if (this.vorbisBlock === undefined) {
+							block = VorbisCommentBlock.fromBuffer(blockBuffer);
 							this._metaBlocks.push(block);
-							this.vorbisBlock = <VorbisCommentBlock>block;
+							this.vorbisBlock = block;
 						}
 						break;
 					case MetadataBlockType.Picture:
-						if (this.picBlock?.pictureType !== (<PictureBlock>block).pictureType) {
+						block = PictureBlock.fromBuffer(blockBuffer);
+						if (this.picBlock?.pictureType !== block.pictureType) {
 							this._metaBlocks.push(block);
-							this.picBlock = <PictureBlock>block;
+							this.picBlock = block;
 						}
 						break;
 					default:
+						block = OtherMetadataBlock.fromBuffer(blockBuffer);
 						this._metaBlocks.push(block);
 						break;
 				}
-				if (block.header.isLast) return this.onDone(callback);
+				if (block?.header.isLast) return this.onDone(callback);
 			}
 			callback(null, Buffer.alloc(0));
 		} catch (err) {

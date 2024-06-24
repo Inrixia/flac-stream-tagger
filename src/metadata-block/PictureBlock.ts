@@ -1,7 +1,7 @@
 import imageinfo from "imageinfo";
-import { MetadataBlockHeader, MetadataBlockHeaderLength, MetadataBlockType } from "./header.js";
-import { MetadataBlock } from "./index.js";
-import { allocBufferAndWrite } from "../lib/buffer-base.js";
+import { MetadataBlockHeader, MetadataBlockHeaderLength, MetadataBlockType } from "./MetadataBlockHeader.js";
+import { MetadataBlock } from "./MetadataBlock.js";
+import { allocBufferAndWrite } from "../lib/BufferBase.js";
 
 export enum PictureType {
 	Other,
@@ -27,19 +27,19 @@ export enum PictureType {
 	BandLogotype,
 	PublisherLogotype,
 }
-export class PictureBlock extends MetadataBlock {
-	header: MetadataBlockHeader;
-	pictureType: PictureType;
-	mime: string;
-	description: string;
-	width: number;
-	height: number;
-	colorDepth: number;
-	colors: number;
-	pictureBuffer: Buffer;
+export class PictureBlock extends MetadataBlock<MetadataBlockType.Picture> {
+	public header: MetadataBlockHeader<MetadataBlockType.Picture>;
+	public pictureType: PictureType;
+	public mime: string;
+	public description: string;
+	public width: number;
+	public height: number;
+	public colorDepth: number;
+	public colors: number;
+	public pictureBuffer: Buffer;
 
 	constructor(initialValues: {
-		header?: MetadataBlockHeader;
+		header?: MetadataBlockHeader<MetadataBlockType.Picture>;
 		pictureType?: PictureType;
 		mime?: string;
 		description?: string;
@@ -51,9 +51,7 @@ export class PictureBlock extends MetadataBlock {
 	}) {
 		super();
 		const {
-			header = new MetadataBlockHeader({
-				type: MetadataBlockType.Picture,
-			}),
+			header = new MetadataBlockHeader(MetadataBlockType.Picture),
 			pictureType = PictureType.FrontCover,
 			mime,
 			description = "",
@@ -84,7 +82,8 @@ export class PictureBlock extends MetadataBlock {
 	static fromBuffer(buffer: Buffer) {
 		let bufferIndex = 0;
 
-		const header = MetadataBlockHeader.fromBuffer(buffer);
+		const header = MetadataBlockHeader.fromBuffer<MetadataBlockType.Picture>(buffer);
+		if (header.type !== MetadataBlockType.Picture) throw new Error(`Invalid picture block header type! Expected type ${MetadataBlockType.Picture} got ${header.type}`);
 		bufferIndex += header.length;
 
 		const pictureType = buffer.readUintBE(bufferIndex, 4) as PictureType;
