@@ -1,28 +1,17 @@
 {
   "name": "flac-stream-tagger",
-  "version": "1.0.2",
+  "version": "1.0.6",
   "description": "Pure JavaScript FLAC Tag writer and reader.",
-  "main": "dist/esm/index.js",
-  "types": "dist/types/index.d.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "type": "module",
-  "exports": {
-    "import": "./dist/esm/index.js",
-    "require": "./dist/cjs/index.js",
-    "default": "./dist/esm/index.js"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/Inrixia/flac-stream-tagger.git"
   },
   "scripts": {
     "watch": "tsc --watch --sourceMap",
-    "build-esm": "tsc",
-    "build-cjs": "tsc -p tsconfig.cjs.json",
-    "build": "npm run cleanup && npm run build-esm && npm run build-cjs && tsconfig-to-dual-package",
-    "type-check": "tsc --noEmit",
-    "eslint-check": "eslint . --ext .cjs,.mjs,.ts",
-    "lint": "npm npm type-check && npm run eslint-check",
-    "eslint-fix": "eslint . --ext .cjs,.mjs,.ts --fix",
+    "build": "npm run cleanup && tsc",
     "test-watch": "vitest",
     "test": "vitest run",
     "cleanup": "rimraf dist",

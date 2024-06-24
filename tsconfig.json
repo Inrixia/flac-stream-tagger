@@ -8,8 +8,7 @@
 		"declaration": true /* Generates corresponding '.d.ts' file. */,
 		"sourceMap": true /* Generates corresponding '.map' file. */,
 		// "outFile": "./",                       /* Concatenate and emit output to single file. */
-		"outDir": "./dist/esm" /* Redirect output structure to the directory. */,
-		"declarationDir": "./dist/types" /* Specify the output directory for generated declaration files. */,
+		"outDir": "./dist" /* Redirect output structure to the directory. */,
 		"rootDir": "./src" /* Specify the root directory of input files. Use to control the output directory structure with --outDir. */,
 
 		/* Strict Type-Checking Options */

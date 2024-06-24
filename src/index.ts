@@ -6,6 +6,12 @@ import { PictureBlock } from "./metadata-block/PictureBlock.js";
 import { VorbisCommentBlock } from "./metadata-block/VorbisCommentBlock.js";
 import { OtherMetadataBlock } from "./metadata-block/OtherMetadataBlock.js";
 
+export * from "./lib/FlacTags.js";
+export * from "./metadata-block/MetadataBlockHeader.js";
+export * from "./metadata-block/MetadataBlock.js";
+export * from "./metadata-block/PictureBlock.js";
+export * from "./metadata-block/VorbisCommentBlock.js";
+export * from "./metadata-block/OtherMetadataBlock.js";
 export class FlacStreamTagger extends Transform {
 	private index: number = 0;
 	private done: boolean = false;
@@ -104,12 +110,12 @@ export class FlacStreamTagger extends Transform {
 		);
 		this._metaBlocksInner?.res?.();
 	}
-	_flush(_callback: TransformCallback): void {
+	public _flush(_callback: TransformCallback): void {
 		const callback = this.safeCallback(_callback);
 		if (!this.done && !this.readOnly) return this.onDone(callback);
 		return callback();
 	}
-	safeCallback(callback: TransformCallback): TransformCallback {
+	private safeCallback(callback: TransformCallback): TransformCallback {
 		return (error, data) => {
 			if (error) this._metaBlocksInner?.rej?.(error);
 			// void data if this.readOnly is true
@@ -117,7 +123,7 @@ export class FlacStreamTagger extends Transform {
 			return callback(error, data);
 		};
 	}
-	_transform(chunk: Buffer, encoding: BufferEncoding, _callback: TransformCallback): void {
+	public _transform(chunk: Buffer, encoding: BufferEncoding, _callback: TransformCallback): void {
 		const callback = this.safeCallback(_callback);
 		try {
 			if (this.done) return callback(null, chunk);
