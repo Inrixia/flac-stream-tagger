@@ -24,8 +24,8 @@ export class MetadataBlockHeader<T extends MetadataBlockType> extends BufferBase
 	}
 
 	public static readonly SIZE = 4;
-	static fromBuffer<T extends MetadataBlockType>(buffer: Buffer, offset?: number) {
-		const lastAndType = buffer.readUint8(offset);
+	static fromBuffer<T extends MetadataBlockType>(buffer: Buffer) {
+		const lastAndType = buffer.readUint8();
 		return new MetadataBlockHeader<T>((lastAndType & 0b01111111) as T, buffer.readUintBE(1, 3), (lastAndType & 0b10000000) === 1);
 	}
 

@@ -1,4 +1,5 @@
 import { Readable, Transform, TransformCallback } from "stream";
+
 import { FlacTags } from "./lib/FlacTags.js";
 import { MetadataBlockHeader, MetadataBlockType } from "./metadata-block/MetadataBlockHeader.js";
 import { MetadataBlock } from "./metadata-block/MetadataBlock.js";
@@ -99,7 +100,7 @@ export class FlacStreamTagger extends Transform {
 			null,
 			Buffer.concat([
 				Buffer.from(FlacStreamTagger.StreamMarker),
-				...this._metaBlocks.map((block, index) => {
+				...this._metaBlocks.sort((a, b) => a.header.type - b.header.type).map((block, index) => {
 					const isLast = index === this._metaBlocks.length - 1;
 					block.header.isLast = isLast;
 					block.header.dataLength = block.length - block.header.length;
@@ -137,16 +138,19 @@ export class FlacStreamTagger extends Transform {
 				if (marker !== FlacStreamTagger.StreamMarker) return callback(new Error(`Invalid stream header: ${marker}`));
 				this.index = 4;
 			}
-
+			
 			// Process metadata blocks
 			while (this.index + MetadataBlockHeader.SIZE < this.headerBuffer.length) {
-				const { dataLength, type, length } = MetadataBlockHeader.fromBuffer(this.headerBuffer.subarray(this.index, this.index + MetadataBlockHeader.SIZE));
-				if (this.index + dataLength + MetadataBlockHeader.SIZE > this.headerBuffer.length) break;
-
+				const { dataLength, type, length, isLast } = MetadataBlockHeader.fromBuffer(this.headerBuffer.subarray(this.index, this.index + MetadataBlockHeader.SIZE));
+				if (type === MetadataBlockType.Invalid) return this.onDone(callback);
+				
 				const blockLength = dataLength + length;
-				const blockBuffer = this.headerBuffer.subarray(this.index);
+				if (this.index + blockLength > this.headerBuffer.length) break;
+				
+				const blockBuffer = this.headerBuffer.subarray(this.index, this.index + blockLength);
 				this.index += blockLength;
 				let block;
+
 				switch (type) {
 					case MetadataBlockType.VorbisComment:
 						if (this.vorbisBlock === undefined) {
@@ -167,9 +171,9 @@ export class FlacStreamTagger extends Transform {
 						this._metaBlocks.push(block);
 						break;
 				}
-				if (block?.header.isLast) return this.onDone(callback);
+				if (isLast) return this.onDone(callback);
 			}
-			callback(null, Buffer.alloc(0));
+			callback();
 		} catch (err) {
 			callback(<Error>err);
 		}

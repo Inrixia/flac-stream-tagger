@@ -1,8 +1,6 @@
 import { MetadataBlock } from "./MetadataBlock.js";
 import { MetadataBlockHeader, MetadataBlockType } from "./MetadataBlockHeader.js";
 
-console.log(MetadataBlock);
-
 export class OtherMetadataBlock<T extends MetadataBlockType> extends MetadataBlock<T> {
 	constructor(
 		public header: MetadataBlockHeader<T>,
