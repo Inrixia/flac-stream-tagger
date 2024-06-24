@@ -1,12 +1,11 @@
 import { assert } from "vitest";
-import { readFile } from "fs/promises";
+import { readFileSync } from "fs";
 import { FlacTags } from "../lib/FlacTags.js";
 import { join } from "path";
 
-export const coverBuffer = await readFile(join(__dirname, "./cover.jpg"));
+export const coverBuffer = readFileSync(join(__dirname, "./cover.jpg"));
 export const sourcePath = join(__dirname, "./audio-blank.flac");
 export const readPath = join(__dirname, "./audio-read.flac");
-export const writePath = join(__dirname, "./audio-write.flac");
 
 export const tags: FlacTags = {
 	tagMap: {

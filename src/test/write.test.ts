@@ -1,7 +1,7 @@
-import { describe, test, afterEach } from "vitest";
+import { describe, test } from "vitest";
 import { createReadStream } from "fs";
-import { readFile, unlink, writeFile } from "fs/promises";
-import { assertTags, sourcePath, tags, writePath } from "./common.js";
+import { readFile } from "fs/promises";
+import { assertTags, sourcePath, tags } from "./common.js";
 import { FlacStreamTagger } from "../index.js";
 
 describe("write FLAC tags", () => {

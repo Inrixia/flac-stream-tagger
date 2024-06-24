@@ -1,57 +1,82 @@
-# flac-tagger
+# flac-stream-tagger
 
 Pure JavaScript FLAC Tag writer and reader.
+Improved from `flac-tagger` to have native stream support and better memory handling for large files.
 
 ## Installation
 
 ```powershell
-npm install flac-tagger
+npm install flac-stream-tagger
 ```
 
 ## Usage
 
-### Read FLAC Tags
+### Read
+
 ```ts
-import { FlacTags, readFlacTags } from 'flac-tagger'
-import { readFile } from 'fs/promises'
+import { FlacStreamTagger } from "flac-stream-tagger";
+import { createReadStream } from "fs";
+import { readFile } from "fs/promises";
 
-// read from file path
-const tagsFromFile: FlacTags = await readFlacTags('path/to/file.flac')
+// Create read stream from file (can use any readable stream does not have to be a file)
+const readStream = createReadStream("input.flac");
 
-// read from buffer
-const buffer = await readFile('path/to/file.flac')
-const tagsFromBuffer: FlacTags = await readFlacTags(buffer)
-
-// read tag by vorbis comment name (case-insensitive)
-const { title, artist, album } = tagsFromFile.tagMap
-// read cover image
-const coverBuffer = tagsFromFile.picture?.buffer
+// Pipe any Readable stream into tagger
+const tagger = readStream.pipe(new FlacStreamTagger());
+// or from buffer
+const tagger = FlacStreamTagger.fromBuffer(await readFile("input.flac"));
 ```
 
-### Write FLAC Tags
-```ts
-import { FlacTagMap, writeFlacTags } from 'flac-tagger'
-import { readFile } from 'fs/promises'
+### Print Tags
 
-// write vorbis comments (names are case-insensitive)
-const tagMap: FlacTagMap = {
-  // single value
-  title: 'song title',
-  // multiple values
-  artist: ['artist A', 'artist B'],
-  album: 'album name',
-}
-await writeFlacTags(
-  {
-    tagMap,
-    // (optional) cover image
-    picture: {
-      buffer: await readFile('coverImage.jpg'),
-    }
-  },
-  // path to existing flac file
-  'path/to/file.flac',
-)
+```ts
+// Read tags
+const tags = await tagger.tags();
+console.log(tags);
+
+// Read raw metadata blocks
+const blocks = await tagger.metaBlocks();
+console.log(blocks);
+
+// read tag by vorbis comment name (case-insensitive)
+const { title, artist, album } = tags.tagMap;
+// read cover image
+const coverBuffer = tags.picture?.buffer;
+```
+
+### Write
+
+```ts
+import { FlacStreamTagger } from "flac-stream-tagger";
+import { readFile } from "fs/promises";
+
+const flacTags: FlacTags = {
+	// write vorbis comments (names are case-insensitive)
+	tagMap: {
+		// single value
+		title: "song title",
+		// multiple values
+		artist: ["artist A", "artist B"],
+		album: "album name",
+	},
+	// (optional) cover image
+	picture: {
+		buffer: await readFile("coverImage.jpg"),
+	},
+};
+
+// Some input stream see Read example
+const inputStream: Readable;
+
+// Pipe any Readable stream into tagger
+const tagger = inputStream.pipe(new FlacStreamTagger(tags));
+// or from buffer
+const tagger = FlacStreamTagger.fromBuffer(inputBuffer, tags);
+
+// Pipe tagger into any Writable stream
+tagger.pipe(createWriteStream("output.flac"));
+// or get the buffer
+cosnt buffer = await tagger.toBuffer();
 ```
 
 ## Specification
