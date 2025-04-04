@@ -1,18 +1,18 @@
 import { Readable, Transform, TransformCallback } from "stream";
 
 import { FlacTags } from "./lib/FlacTags.js";
-import { MetadataBlockHeader, MetadataBlockType } from "./metadata-block/MetadataBlockHeader.js";
 import { MetadataBlock } from "./metadata-block/MetadataBlock.js";
+import { MetadataBlockHeader, MetadataBlockType } from "./metadata-block/MetadataBlockHeader.js";
+import { OtherMetadataBlock } from "./metadata-block/OtherMetadataBlock.js";
 import { PictureBlock } from "./metadata-block/PictureBlock.js";
 import { VorbisCommentBlock } from "./metadata-block/VorbisCommentBlock.js";
-import { OtherMetadataBlock } from "./metadata-block/OtherMetadataBlock.js";
 
 export * from "./lib/FlacTags.js";
-export * from "./metadata-block/MetadataBlockHeader.js";
 export * from "./metadata-block/MetadataBlock.js";
+export * from "./metadata-block/MetadataBlockHeader.js";
+export * from "./metadata-block/OtherMetadataBlock.js";
 export * from "./metadata-block/PictureBlock.js";
 export * from "./metadata-block/VorbisCommentBlock.js";
-export * from "./metadata-block/OtherMetadataBlock.js";
 export class FlacStreamTagger extends Transform {
 	private index: number = 0;
 	private done: boolean = false;
@@ -66,6 +66,7 @@ export class FlacStreamTagger extends Transform {
 			this.vorbisBlock = new VorbisCommentBlock();
 			for (const key in tagMap) {
 				const value = tagMap[key];
+				if (value === undefined || value === null) continue;
 				if (Array.isArray(value)) {
 					for (const singleValue of value) this.vorbisBlock.commentList.push(`${key.toUpperCase()}=${singleValue}`);
 				} else {
@@ -100,12 +101,14 @@ export class FlacStreamTagger extends Transform {
 			null,
 			Buffer.concat([
 				Buffer.from(FlacStreamTagger.StreamMarker),
-				...this._metaBlocks.sort((a, b) => a.header.type - b.header.type).map((block, index) => {
-					const isLast = index === this._metaBlocks.length - 1;
-					block.header.isLast = isLast;
-					block.header.dataLength = block.length - block.header.length;
-					return block.toBuffer();
-				}),
+				...this._metaBlocks
+					.sort((a, b) => a.header.type - b.header.type)
+					.map((block, index) => {
+						const isLast = index === this._metaBlocks.length - 1;
+						block.header.isLast = isLast;
+						block.header.dataLength = block.length - block.header.length;
+						return block.toBuffer();
+					}),
 				this.headerBuffer.subarray(this.index),
 			])
 		);
@@ -138,15 +141,15 @@ export class FlacStreamTagger extends Transform {
 				if (marker !== FlacStreamTagger.StreamMarker) return callback(new Error(`Invalid stream header: ${marker}`));
 				this.index = 4;
 			}
-			
+
 			// Process metadata blocks
 			while (this.index + MetadataBlockHeader.SIZE < this.headerBuffer.length) {
 				const { dataLength, type, length, isLast } = MetadataBlockHeader.fromBuffer(this.headerBuffer.subarray(this.index, this.index + MetadataBlockHeader.SIZE));
 				if (type === MetadataBlockType.Invalid) return this.onDone(callback);
-				
+
 				const blockLength = dataLength + length;
 				if (this.index + blockLength > this.headerBuffer.length) break;
-				
+
 				const blockBuffer = this.headerBuffer.subarray(this.index, this.index + blockLength);
 				this.index += blockLength;
 				let block;
